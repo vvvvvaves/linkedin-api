@@ -38,11 +38,15 @@ def get_driver(url):
         options.add_argument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
     
     driver = webdriver.Chrome(options=options)
-    wait = WebDriverWait(driver, 30)
+    wait = WebDriverWait(driver, 5)
 
     driver.get(url)
+
 
     return driver, wait
 
@@ -61,7 +65,14 @@ def get_job_description_structured(driver, wait):
         print(f"Click at coordinates failed: {e}")
 
     # Get the HTML content of the job description container
-    content_container = driver.find_element(By.XPATH, './/div[contains(@class, "core-section-container")]')
+    try:
+        wait.until(EC.presence_of_element_located((By.XPATH, './/div[contains(@class, "core-section-container")]')))
+        content_container = driver.find_element(By.XPATH, './/div[contains(@class, "core-section-container")]')
+    except TimeoutException:
+        print("Timeout waiting for job description container")
+        with open("debug.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        return None
     html_content = content_container.get_attribute('innerHTML')
 
     # Parse with BeautifulSoup
